@@ -13,9 +13,9 @@ try:
 except ImportError:
     print("Missing dependency: pip install librosa")
 try:
-    import whisper
+    from faster_whisper import WhisperModel
 except ImportError:
-    print("Missing dependency: pip install openai-whisper")
+    print("Missing dependency: pip install faster-whisper")
 try:
     import yt_dlp
 except ImportError:
@@ -212,17 +212,17 @@ def detect_energy_spikes(wav_path: str, logger: ProgressLogger) -> list:
 
 def transcribe_and_detect(wav_path: str, model, logger: ProgressLogger) -> list:
     logger.log("   🎙  Transcribing commentary with Whisper…")
-    result = model.transcribe(wav_path, fp16=False, word_timestamps=True)
+    segments, info = model.transcribe(wav_path, beam_size=5)
 
     detections = []
-    for seg in result.get("segments", []):
-        text  = seg.get("text", "").lower().strip()
-        start = float(seg.get("start", 0.0))
+    for seg in segments:
+        text  = seg.text.lower().strip()
+        start = float(seg.start)
 
         for pattern, label, emoji, base_score, size_boost in FOOTBALL_MOMENTS:
             if re.search(pattern, text, re.IGNORECASE):
                 exclaim_bonus = min(2.0, text.count("!") * 0.4)
-                caps_ratio = sum(1 for c in seg.get("text", "") if c.isupper()) / max(1, len(seg.get("text", "")))
+                caps_ratio = sum(1 for c in seg.text if c.isupper()) / max(1, len(seg.text))
                 caps_bonus = min(1.5, caps_ratio * 5)
                 total_score = round(base_score + exclaim_bonus + caps_bonus, 2)
                 detections.append((start, total_score, label, emoji, size_boost))
@@ -380,7 +380,7 @@ def run_pipeline(source_url: str, output_dir: str, format_name: str, style_name:
         extract_audio(src, wav)
         
         logger.log(f"\n[3/5] Loading Whisper '{whisper_model_size}' & detecting moments…", 50, "analyzing")
-        wmodel = whisper.load_model(whisper_model_size)
+        wmodel = WhisperModel(whisper_model_size, device="cpu", compute_type="int8")
         energy_spikes = detect_energy_spikes(wav, logger)
         kw_detections = transcribe_and_detect(wav, wmodel, logger)
         
