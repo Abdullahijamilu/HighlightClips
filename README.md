@@ -1,3 +1,13 @@
+---
+title: Highlightclip
+emoji: ⚽
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+app_port: 8000
+---
+
 # Football Highlight Clipper ⚽🔥
 
 An AI-powered web application that automatically analyzes full football match videos, detects the most hype moments using crowd audio energy and commentary analysis (via OpenAI Whisper), and exports them as stylized, production-ready clips.
