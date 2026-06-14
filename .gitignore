@@ -1,0 +1,31 @@
+# Node.js / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env*.local
+
+# Python / Backend
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/venv/
+backend/.venv/
+*.pyc
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated Output files and large binaries
+clips/
+highlights/
+vc_redist.x64.exe
+*.mp4
+*.wav
+*.mp3
+*.webm
+*.part
+*.ytdl
