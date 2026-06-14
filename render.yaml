@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: highlight-clipper-backend
+    env: docker
+    dockerfilePath: Dockerfile
+    # Upgrade to standard or pro plan in the Render dashboard if you hit memory limits during Whisper processing
+    envVars:
+      - key: PORT
+        value: 8000
