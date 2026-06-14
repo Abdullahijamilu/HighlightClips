@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: highlight-clipper-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    # Use standard or pro plan for production; free tier might run out of memory during video processing
+    envVars:
+      - key: PORT
+        value: 8000
