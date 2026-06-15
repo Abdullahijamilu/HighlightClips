@@ -183,6 +183,12 @@ def acquire_source(input_src: str, dest_dir: str, no_ssl: bool, logger: Progress
         "legacyserverconnect": True,
         "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
     }
+    
+    cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
+    if os.path.exists(cookie_path):
+        opts["cookiefile"] = cookie_path
+        logger.log("   🍪  Using provided cookies.txt for authentication!")
+        
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([input_src])
 

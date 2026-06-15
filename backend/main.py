@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 import os
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -78,6 +78,50 @@ async def start_clipping(req: ClipRequest, background_tasks: BackgroundTasks):
     }
     
     # Run the processing in the background
+    background_tasks.add_task(process_video_task, job_id, req)
+    
+    return {"job_id": job_id}
+
+UPLOAD_DIR = os.path.join(OUTPUT_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.post("/api/upload_clip")
+async def upload_and_clip(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    num_clips: int = Form(5),
+    format: str = Form("vertical"),
+    style: str = Form("cinematic"),
+    whisper_model: str = Form("tiny"),
+    min_gap: int = Form(40)
+):
+    import shutil
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {
+        "status": "processing",
+        "progress": 0,
+        "stage": "starting",
+        "message": "Saving uploaded file...",
+        "results": []
+    }
+    
+    file_extension = os.path.splitext(file.filename)[1]
+    safe_filename = f"{job_id}{file_extension}"
+    local_path = os.path.join(UPLOAD_DIR, safe_filename)
+    
+    with open(local_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    req = ClipRequest(
+        url=local_path,
+        num_clips=num_clips,
+        format=format,
+        style=style,
+        whisper_model=whisper_model,
+        min_gap=min_gap
+    )
+    
+    jobs[job_id]["message"] = "Upload complete! Initializing AI..."
     background_tasks.add_task(process_video_task, job_id, req)
     
     return {"job_id": job_id}

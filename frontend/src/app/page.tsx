@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const [url, setUrl] = useState("");
+  const [inputType, setInputType] = useState<"url" | "file">("url");
+  const [file, setFile] = useState<File | null>(null);
   const [numClips, setNumClips] = useState(5);
   const [style, setStyle] = useState("cinematic");
   const [format, setFormat] = useState("vertical");
@@ -16,23 +18,42 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url) return;
+    if (inputType === "url" && !url) return;
+    if (inputType === "file" && !file) return;
 
     try {
-      const res = await fetch(`${API_URL}/clip`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          num_clips: numClips,
-          style,
-          format,
-        }),
-      });
-      const data = await res.json();
-      if (data.job_id) {
-        setJobId(data.job_id);
-        setIsPolling(true);
+      if (inputType === "url") {
+        const res = await fetch(`${API_URL}/clip`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url,
+            num_clips: numClips,
+            style,
+            format,
+          }),
+        });
+        const data = await res.json();
+        if (data.job_id) {
+          setJobId(data.job_id);
+          setIsPolling(true);
+        }
+      } else {
+        const formData = new FormData();
+        formData.append("file", file as Blob);
+        formData.append("num_clips", numClips.toString());
+        formData.append("style", style);
+        formData.append("format", format);
+
+        const res = await fetch(`${API_URL}/upload_clip`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.job_id) {
+          setJobId(data.job_id);
+          setIsPolling(true);
+        }
       }
     } catch (err) {
       alert("Failed to connect to backend server.");
@@ -70,15 +91,47 @@ export default function Home() {
       <main>
         {!jobId || status?.status === "error" || status?.status === "completed" ? (
           <form className="glass-panel" onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <button 
+                type="button" 
+                onClick={() => setInputType("url")}
+                style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #333", background: inputType === "url" ? "#ff4d4d" : "rgba(255,255,255,0.05)", color: "white", cursor: "pointer", fontWeight: "bold" }}
+              >
+                Paste URL
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setInputType("file")}
+                style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #333", background: inputType === "file" ? "#ff4d4d" : "rgba(255,255,255,0.05)", color: "white", cursor: "pointer", fontWeight: "bold" }}
+              >
+                Upload Video
+              </button>
+            </div>
+
             <div className="input-group">
-              <label>YouTube Video URL or Local File Path</label>
-              <input 
-                type="text" 
-                placeholder="https://www.youtube.com/watch?v=..." 
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                required
-              />
+              {inputType === "url" ? (
+                <>
+                  <label>YouTube Video URL or Social Link</label>
+                  <input 
+                    type="text" 
+                    placeholder="https://www.youtube.com/watch?v=..." 
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    required={inputType === "url"}
+                  />
+                </>
+              ) : (
+                <>
+                  <label>Upload Video File (.mp4, .mov)</label>
+                  <input 
+                    type="file" 
+                    accept="video/*"
+                    onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                    required={inputType === "file"}
+                    style={{ padding: "10px", background: "rgba(0,0,0,0.2)", borderRadius: "8px", width: "100%", color: "white" }}
+                  />
+                </>
+              )}
             </div>
             
             <div className="grid-2">
@@ -112,7 +165,7 @@ export default function Home() {
               </select>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={!url || isPolling}>
+            <button type="submit" className="btn-primary" disabled={(inputType === "url" ? !url : !file) || isPolling}>
               Generate Highlights 🔥
             </button>
             
@@ -171,6 +224,7 @@ export default function Home() {
                   setJobId(null);
                   setStatus(null);
                   setUrl("");
+                  setFile(null);
                 }}
               >
                 Create More Clips
