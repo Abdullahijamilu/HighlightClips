@@ -33,6 +33,13 @@ export default function Home() {
             format,
           }),
         });
+        
+        if (!res.ok) {
+          const errText = await res.text();
+          alert(`Server Error (${res.status}): ${errText}`);
+          return;
+        }
+        
         const data = await res.json();
         if (data.job_id) {
           setJobId(data.job_id);
@@ -49,14 +56,25 @@ export default function Home() {
           method: "POST",
           body: formData,
         });
+        
+        if (!res.ok) {
+          const errText = await res.text();
+          if (res.status === 413) {
+            alert(`Error: The video file is too large for the free server to handle.`);
+          } else {
+            alert(`Server Error (${res.status}): ${errText}`);
+          }
+          return;
+        }
+        
         const data = await res.json();
         if (data.job_id) {
           setJobId(data.job_id);
           setIsPolling(true);
         }
       }
-    } catch (err) {
-      alert("Failed to connect to backend server.");
+    } catch (err: any) {
+      alert(`Failed to connect to backend server: ${err.message}`);
     }
   };
 
