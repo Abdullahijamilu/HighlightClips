@@ -153,30 +153,44 @@ def acquire_source(input_src: str, dest_dir: str, no_ssl: bool, logger: Progress
         shutil.copy2(input_src, dst)
         return dst
 
-    logger.log("   ⬇️  Downloading from YouTube…")
-    out_tmpl = os.path.join(dest_dir, "source.%(ext)s")
-    opts = {
-        "quiet": False,
-        "no_warnings": True,
-        "format": "worstvideo[ext=mp4]+worstaudio[ext=m4a]/worst[ext=mp4]/worst",
-        "format_sort": ["res", "+size"],
-        "outtmpl": out_tmpl,
-        "merge_output_format": "mp4",
-        "nocheckcertificate": no_ssl,
-        "retries": 5,
-        "fragment_retries": 5,
-        "socket_timeout": 30,
-        "source_address": "0.0.0.0",
-        "legacyserverconnect": True,
-        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
-    }
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        ydl.download([input_src])
+    if "youtube.com" in input_src or "youtu.be" in input_src:
+        logger.log("   ⬇️  Downloading YouTube video via PyTubeFix (Cloud Bypass)…")
+        from pytubefix import YouTube
+        
+        # Using ANDROID client bypasses the cloud server IP ban
+        yt = YouTube(input_src, client='ANDROID')
+        # Get lowest resolution video stream that has both video and audio (progressive)
+        ys = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').first()
+        if not ys:
+            ys = yt.streams.filter(file_extension='mp4').first()
+            
+        out_file = ys.download(output_path=dest_dir, filename="source.mp4")
+        return out_file
+    else:
+        logger.log("   ⬇️  Downloading from external site via yt-dlp…")
+        out_tmpl = os.path.join(dest_dir, "source.%(ext)s")
+        opts = {
+            "quiet": False,
+            "no_warnings": True,
+            "format": "worstvideo[ext=mp4]+worstaudio[ext=m4a]/worst[ext=mp4]/worst",
+            "format_sort": ["res", "+size"],
+            "outtmpl": out_tmpl,
+            "merge_output_format": "mp4",
+            "nocheckcertificate": no_ssl,
+            "retries": 5,
+            "fragment_retries": 5,
+            "socket_timeout": 30,
+            "source_address": "0.0.0.0",
+            "legacyserverconnect": True,
+            "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([input_src])
 
-    files = list(Path(dest_dir).glob("source.*"))
-    if not files:
-        raise FileNotFoundError("Download produced no output file.")
-    return str(files[0])
+        files = list(Path(dest_dir).glob("source.*"))
+        if not files:
+            raise FileNotFoundError("Download produced no output file.")
+        return str(files[0])
 
 def extract_audio(video_path: str, out_wav: str):
     run(["ffmpeg", "-y", "-i", video_path,
