@@ -166,6 +166,7 @@ def acquire_source(input_src: str, dest_dir: str, no_ssl: bool, logger: Progress
         "retries": 5,
         "fragment_retries": 5,
         "socket_timeout": 30,
+        "extractor_args": {"youtube": {"player_client": ["ios", "web"]}},
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([input_src])
